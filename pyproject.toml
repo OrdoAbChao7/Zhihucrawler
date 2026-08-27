@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zhihu-desktop-crawler"
+version = "0.1.0"
+description = "知乎采集与收藏下载桌面工具"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx==0.28.1",
+  "playwright>=1.55.0",
+  "tenacity>=8.2.2",
+  "requests==2.32.3",
+  "html2text>=2024.2.26",
+  "PyYAML>=6.0",
+  "parsel>=1.9.1",
+  "PyExecJS>=1.5.1",
+  "pydantic>=2.5.2",
+]
+
+[project.scripts]
+zhihu-crawler = "zhihu_app.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
