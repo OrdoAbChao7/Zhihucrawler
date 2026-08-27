@@ -26,9 +26,10 @@ def test_settings_reject_unsafe_values(tmp_path):
         AppSettings(output_dir=tmp_path, max_items=0)
 
 
-def test_frozen_defaults_use_local_app_data(monkeypatch, tmp_path):
+def test_frozen_defaults_keep_output_beside_exe_and_profile_in_app_data(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "portable" / "知乎采集器.exe"))
     settings = AppSettings.defaults()
-    assert settings.output_dir == tmp_path / "ZhihuCrawler" / "output"
+    assert settings.output_dir == tmp_path / "portable" / "output"
     assert settings.profile_dir == tmp_path / "ZhihuCrawler" / "browser_profile"

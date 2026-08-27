@@ -29,4 +29,10 @@ $bundledBrowsers = Join-Path $root "dist\知乎采集器\_internal\playwright\dr
 New-Item -ItemType Directory -Force $bundledBrowsers | Out-Null
 Copy-Item -Path (Join-Path $localBrowsers "*") -Destination $bundledBrowsers -Recurse -Force
 if (-not (Get-ChildItem -LiteralPath $bundledBrowsers -Recurse -File -ErrorAction SilentlyContinue)) { throw "发布目录缺少 Chromium 浏览器文件" }
+$portableDir = Join-Path $root "dist\知乎采集器"
+Copy-Item -LiteralPath (Join-Path $root "packaging\PORTABLE_README.txt") -Destination (Join-Path $portableDir "使用说明.txt") -Force
+$portableZip = Join-Path $root "dist\知乎采集器-便携版.zip"
+if (Test-Path -LiteralPath $portableZip) { Remove-Item -LiteralPath $portableZip -Force }
+Compress-Archive -Path (Join-Path $portableDir "*") -DestinationPath $portableZip -CompressionLevel Optimal
 Write-Output (Join-Path $root "dist\知乎采集器\知乎采集器.exe")
+Write-Output $portableZip

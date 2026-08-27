@@ -4,6 +4,7 @@ import pytest
 
 from zhihu_app.engine.models import TaskType, ZhihuTask
 from zhihu_app.engine.paths import build_output_paths, build_task_output_paths
+from zhihu_app.config.settings import AppSettings
 
 
 def test_build_output_paths_stays_under_root(tmp_path):
@@ -31,3 +32,14 @@ def test_task_output_paths_accept_url_targets(tmp_path):
     paths = build_task_output_paths(tmp_path, task, datetime(2026, 8, 27, 10, 0))
     assert paths.task_dir.is_relative_to(tmp_path)
     assert "question" in paths.task_dir.parts
+
+
+def test_frozen_app_writes_output_beside_executable(monkeypatch, tmp_path):
+    import zhihu_app.config.settings as settings_module
+
+    monkeypatch.setattr(settings_module.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(settings_module.sys, "executable", str(tmp_path / "知乎采集器.exe"))
+    settings = AppSettings.defaults()
+
+    assert settings.output_dir == tmp_path / "output"
+    assert settings.profile_dir != settings.output_dir / "data" / "browser_profile"

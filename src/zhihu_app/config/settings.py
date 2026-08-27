@@ -30,8 +30,12 @@ class AppSettings:
             base = Path(root)
             return cls(base / "output", base / "data" / "browser_profile")
         if getattr(sys, "frozen", False):
-            base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "ZhihuCrawler"
-            return cls(base / "output", base / "browser_profile")
+            # Keep generated content beside the portable executable. Login
+            # state remains in the per-user app-data directory so changing
+            # output location does not invalidate an existing login.
+            output_base = Path(sys.executable).resolve().parent
+            profile_base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "ZhihuCrawler"
+            return cls(output_base / "output", profile_base / "browser_profile")
         base = Path(__file__).resolve().parents[3]
         return cls(base / "output", base / "data" / "browser_profile")
 
