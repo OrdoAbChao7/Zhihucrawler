@@ -15,7 +15,7 @@ except ImportError:  # Keep metadata/path tests runnable before optional install
     html2text = None
 
 from ..config.settings import AppSettings
-from ..auth.session import CookieStore
+from ..auth.session import CookieStore, warmup_zhihu_browser
 from .errors import ZhihuAuthError, ZhihuNetworkError, ZhihuRateLimitError, ZhihuRiskControlError
 from .models import TaskResult, ZhihuTask
 from .http_client import ZhihuApiClient
@@ -75,6 +75,9 @@ class CollectionDownloader:
             self.api_client = ZhihuApiClient(
                 CookieStore(profile_dir.parent / "cookies.json"), proxy=settings.proxy,
                 min_interval=settings.interval_seconds,
+                browser_warmup=lambda uri: warmup_zhihu_browser(
+                    profile_dir, CookieStore(profile_dir.parent / "cookies.json"), uri, settings.proxy
+                ),
             )
             self.session = self.api_client.session
         if self.session is None:

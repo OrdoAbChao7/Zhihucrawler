@@ -88,3 +88,52 @@ class SessionManager:
             self._browser = None
         if getattr(self, "_playwright", None):
             await self._playwright.stop()
+
+
+def warmup_zhihu_browser(
+    profile_dir: Path,
+    cookie_store: CookieStore,
+    target_uri: str = "/",
+    proxy: str = "",
+) -> bool:
+    """Warm the saved browser session before retrying a risk-controlled API call.
+
+    This follows the normal browser flow used by the reference crawlers: visit
+    Zhihu first, then the relevant content owner page, and export the browser's
+    current cookies. It is not a bypass; a platform-level 40362 remains an
+    explicit error after the single retry.
+    """
+    from playwright.sync_api import sync_playwright
+
+    if "/members/" in target_uri:
+        token = target_uri.split("/members/", 1)[1].split("/", 1)[0]
+        page_url = f"https://www.zhihu.com/people/{token}"
+    elif "/questions/" in target_uri:
+        question_id = target_uri.split("/questions/", 1)[1].split("/", 1)[0]
+        page_url = f"https://www.zhihu.com/question/{question_id}"
+    else:
+        page_url = "https://www.zhihu.com/"
+
+    launch_args = ["--no-sandbox"]
+    try:
+        with sync_playwright() as playwright:
+            context_kwargs = {"headless": True, "args": launch_args}
+            if proxy:
+                context_kwargs["proxy"] = {"server": proxy}
+            context = playwright.chromium.launch_persistent_context(str(profile_dir), **context_kwargs)
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(1200)
+                if page_url != "https://www.zhihu.com/":
+                    page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(1200)
+                cookies = context.cookies(["https://www.zhihu.com", "https://zhuanlan.zhihu.com"])
+                if not has_zhihu_auth(cookies):
+                    return False
+                cookie_store.save(cookies)
+                return True
+            finally:
+                context.close()
+    except Exception:
+        return False

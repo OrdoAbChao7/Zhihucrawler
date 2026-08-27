@@ -147,3 +147,44 @@ def test_api_client_reports_zhihu_risk_control_instead_of_expired_login(tmp_path
     client = ZhihuApiClient(store, signer=Signer(), session=Session())
     with pytest.raises(ZhihuRiskControlError, match="风控.*40362"):
         client.get("/api/v4/questions/1/answers")
+
+
+def test_api_client_warms_browser_once_and_retries_risk_control(tmp_path):
+    class Response:
+        def __init__(self, status_code, payload):
+            self.status_code = status_code
+            self.payload = payload
+
+        def json(self): return self.payload
+        def raise_for_status(self): pass
+
+    class Session:
+        def __init__(self):
+            import requests
+            self.cookies = requests.cookies.RequestsCookieJar()
+            self.responses = [
+                Response(403, {"error": {"code": 40362}}),
+                Response(200, {"data": [{"id": "1"}]}),
+            ]
+            self.calls = []
+
+        def get(self, url, **kwargs):
+            self.calls.append((url, kwargs))
+            return self.responses.pop(0)
+
+    class Signer:
+        def sign(self, *args): return {"x-zst-81": "a", "x-zse-96": "b"}
+
+    store = CookieStore(tmp_path / "cookies.json")
+    store.save(AUTH_COOKIES)
+    warmed = []
+    session = Session()
+    client = ZhihuApiClient(
+        store, signer=Signer(), session=session,
+        browser_warmup=lambda uri: warmed.append(uri) or True,
+    )
+
+    assert client.get("/api/v4/questions/123/answers") == {"data": [{"id": "1"}]}
+    assert warmed == ["/api/v4/questions/123/answers"]
+    assert session.calls[0][1]["headers"]["referer"].endswith("/question/123")
+    assert session.calls[0][1]["headers"]["origin"] == "https://www.zhihu.com"
