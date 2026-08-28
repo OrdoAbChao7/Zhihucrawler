@@ -43,6 +43,19 @@ def test_same_title_different_urls_do_not_overwrite(tmp_path):
     assert len(list((tmp_path / "markdown").glob("同名-*.md"))) == 2
 
 
+def test_items_without_title_or_url_use_content_identity(tmp_path):
+    downloader = CollectionDownloader(AppSettings(tmp_path), session=object())
+    items = [
+        {"content": "第一篇收藏内容"},
+        {"content": "第二篇收藏内容"},
+    ]
+
+    assert downloader.download_items(items, tmp_path, lambda _: None) == 2
+    files = list((tmp_path / "markdown").glob("*.md"))
+    assert len(files) == 2
+    assert len({path.read_text(encoding="utf-8") for path in files}) == 2
+
+
 def test_image_download_uses_cookie_free_session_and_interval(tmp_path):
     class Response:
         content = b"image"

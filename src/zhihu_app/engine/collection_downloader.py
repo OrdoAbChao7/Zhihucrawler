@@ -36,10 +36,30 @@ def item_to_markdown(item: dict[str, Any]) -> str:
             flags=re.IGNORECASE,
         )
         content = re.sub(r"<[^>]+>", "", content)
-    title = item.get("question", {}).get("title") or item.get("title") or "知乎内容"
+    title = _item_title(item)
     url = item.get("url", "")
     updated = item.get("updated_time", 0)
     return f"---\ntitle: {title}\nurl: {url}\nupdated_time: {updated}\n---\n\n{content.strip()}\n"
+
+
+def _content_preview(item: dict[str, Any]) -> str:
+    raw_content = item.get("content", "")
+    if isinstance(raw_content, dict):
+        raw_content = raw_content.get("html") or raw_content.get("content") or raw_content.get("text") or ""
+    if not isinstance(raw_content, str):
+        raw_content = str(raw_content)
+    preview = re.sub(r"<[^>]+>", " ", raw_content)
+    preview = re.sub(r"\s+", " ", preview).strip()
+    return preview
+
+
+def _item_title(item: dict[str, Any]) -> str:
+    question = item.get("question") if isinstance(item.get("question"), dict) else {}
+    title = question.get("title") or item.get("title")
+    if title:
+        return str(title)
+    preview = _content_preview(item)
+    return preview[:80] + ("…" if len(preview) > 80 else "") if preview else "知乎内容"
 
 
 def should_skip_existing(path: Path, url: str, updated_time: int) -> bool:
@@ -113,8 +133,9 @@ class CollectionDownloader:
         attempted_image = False
         for item in items:
             url = item.get("url", "")
-            title = _safe_filename(item.get("question", {}).get("title") or item.get("title") or item.get("id", "知乎内容"))
-            identity = url or str(item.get("id", "")) or title
+            title = _safe_filename(_item_title(item))
+            content_identity = _content_preview(item)
+            identity = url or str(item.get("id", "")) or content_identity or title
             suffix = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:10]
             path = markdown_dir / f"{title}-{suffix}.md"
             if should_skip_existing(path, url, item.get("updated_time", 0)):
