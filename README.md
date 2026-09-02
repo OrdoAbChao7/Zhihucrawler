@@ -1,3 +1,9 @@
+<div align="center">
+  <h1>知乎采集器 ZhihuCrawler</h1>
+  <a href="./README.en.md"><b>English</b></a> | <b>中文</b>
+</div>
+<br>
+
 # 知乎采集器
 
 Windows 图形化知乎工具，整合两类能力：
