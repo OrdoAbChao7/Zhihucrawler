@@ -1,0 +1,3 @@
+## 2024-05-24 - Explicit State Cues in Desktop UI
+**Learning:** Standard web accessibility paradigms (like ARIA labels or CSS hover selectors) do not apply to Tkinter apps. A desktop-specific approach requires explicit state management (like disabling/enabling buttons to reflect operation state) and explicitly setting hover states (`cursor="hand2"`) to emulate web-like responsive cues.
+**Action:** Always check the GUI framework type (Tkinter vs. web) before applying UX improvements. For Tkinter, use explicit `configure(state="disabled")` and cursor changes to provide visual feedback and prevent invalid states.
