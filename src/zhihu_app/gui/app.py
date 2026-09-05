@@ -115,10 +115,14 @@ class ZhihuApp:
 
         actions = ttk.Frame(frame, style="App.TFrame")
         actions.pack(fill="x", pady=(0, 9))
-        ttk.Button(actions, text="▶  开始任务", style="Primary.TButton", command=self._start).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="■  停止", style="Secondary.TButton", command=self._cancel).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="⇥  登录知乎", style="Secondary.TButton", command=self._login).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="打开输出目录", style="Secondary.TButton", command=self._open_output).pack(side="right")
+        self.btn_start = ttk.Button(actions, text="▶  开始任务", style="Primary.TButton", command=self._start, cursor="hand2")
+        self.btn_start.pack(side="left", padx=(0, 9))
+        self.btn_stop = ttk.Button(actions, text="■  停止", style="Secondary.TButton", command=self._cancel, cursor="hand2", state="disabled")
+        self.btn_stop.pack(side="left", padx=(0, 9))
+        self.btn_login = ttk.Button(actions, text="⇥  登录知乎", style="Secondary.TButton", command=self._login, cursor="hand2")
+        self.btn_login.pack(side="left", padx=(0, 9))
+        self.btn_output = ttk.Button(actions, text="打开输出目录", style="Secondary.TButton", command=self._open_output, cursor="hand2")
+        self.btn_output.pack(side="right")
 
         status_bar = ttk.Frame(frame, style="App.TFrame")
         status_bar.pack(fill="x", pady=(0, 8))
@@ -147,6 +151,11 @@ class ZhihuApp:
             task = build_task_from_form(values)
             task.output_dir = build_task_output_paths(self.settings.output_dir, task).task_dir
             self.runner.submit(task)
+
+            self.btn_start.configure(state="disabled")
+            self.btn_login.configure(state="disabled")
+            self.btn_stop.configure(state="normal")
+
             self._log(f"任务已开始，输出目录：{task.output_dir}")
             self.status_var.set("正在采集…")
         except (ValueError, RuntimeError) as exc:
@@ -158,6 +167,7 @@ class ZhihuApp:
         return MediaCrawlerAdapter(self.settings).run(task, emit, cancel)
 
     def _login(self) -> None:
+        self.btn_login.configure(state="disabled")
         self._log("正在启动知乎登录浏览器…")
         from ..auth.session import CookieStore, SessionManager
         from ..engine.http_client import ZhihuApiClient
@@ -175,19 +185,30 @@ class ZhihuApp:
         ).start()
 
     def _login_succeeded(self, session) -> None:
+        self.btn_login.configure(state="normal")
         self._login_session = session
         self._log("知乎登录态验证成功，可以开始采集")
 
     def _cancel(self) -> None:
-        self.runner.cancel(); self._log("已请求停止任务")
+        self.runner.cancel()
+        self._log("已请求停止任务")
 
     def _log(self, message: str) -> None:
         self.log.configure(state="normal"); self.log.insert("end", message + "\n"); self.log.see("end"); self.log.configure(state="disabled")
 
+    def _reset_buttons(self) -> None:
+        if hasattr(self, 'btn_start'):
+            self.btn_start.configure(state="normal")
+            self.btn_login.configure(state="normal")
+            self.btn_stop.configure(state="disabled")
+
     def _finished(self, status: str) -> None:
+        self._reset_buttons()
         self.status_var.set(f"任务结束：{status}")
         self._log(f"任务结束：{status}")
+
     def _error(self, error: Exception) -> None:
+        self._reset_buttons()
         self.status_var.set("任务出错")
         messagebox.showerror("任务错误", str(error)); self._log(f"错误：{error}")
     def _close(self) -> None: self.runner.cancel(); self.root.destroy()
