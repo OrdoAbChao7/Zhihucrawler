@@ -75,7 +75,6 @@ class ZhihuApp:
         self.include_comments = tk.BooleanVar(value=False)
         self.status_var = tk.StringVar(value="准备就绪")
 
-        self._build()
         self.runner = TaskRunner(self._run_task)
         self.runner.on_log = lambda message: self.root.after(0, self._log, message)
         self.runner.on_done = lambda result: self.root.after(0, lambda: self._finished(result.status))
@@ -83,7 +82,10 @@ class ZhihuApp:
         self._login_session = None
         self.root.protocol("WM_DELETE_WINDOW", self._close)
 
+        self._build()
 
+
+    def _build(self) -> None:
         # Header
         header = ctk.CTkFrame(self.root, fg_color=self.colors["surface"], corner_radius=0, height=80)
         header.pack(fill="x", pady=(0, 10))
