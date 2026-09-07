@@ -17,6 +17,8 @@ dependencies = [
   "parsel>=1.9.1",
   "PyExecJS>=1.5.1",
   "pydantic>=2.5.2",
+  "customtkinter>=5.2.2",
+  "darkdetect>=0.8.0",
 ]
 
 [project.scripts]

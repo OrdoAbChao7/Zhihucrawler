@@ -90,9 +90,11 @@ def test_api_client_injects_saved_cookies_and_signature(tmp_path):
 
 
 def test_real_node_signer_returns_required_headers():
+    import sys
     root = Path(__file__).resolve().parents[1]
+    node_path = root / ".venv" / "Lib" / "site-packages" / "playwright" / "driver" / "node.exe" if sys.platform == "win32" else root / ".venv" / "bin" / "node" if (root / ".venv" / "bin" / "node").exists() else Path("/usr/bin/node") if Path("/usr/bin/node").exists() else root / ".venv" / "lib" / "python3.12" / "site-packages" / "playwright" / "driver" / "node"
     signer = NodeZhihuSigner(
-        node_path=root / ".venv" / "Lib" / "site-packages" / "playwright" / "driver" / "node.exe",
+        node_path=node_path,
         script_path=root / "vendor" / "mediacrawler" / "libs" / "zhihu.js",
     )
     result = signer.sign("/api/v4/me?include=email", "d_c0=test-token; z_c0=test-login")
