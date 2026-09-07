@@ -6,6 +6,7 @@ import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
+import customtkinter as ctk
 
 from ..config.settings import AppSettings
 from ..engine.collection_downloader import CollectionDownloader
@@ -53,22 +54,27 @@ def run_login_in_background(session_factory, on_error, on_success=None, verifier
 class ZhihuApp:
     def __init__(self, settings: AppSettings) -> None:
         self.settings = settings
-        self.root = tk.Tk()
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+
+        self.root = ctk.CTk()
         self.root.title("知乎采集器")
-        self.root.geometry("900x680")
+        self.root.geometry("900x700")
         self.root.minsize(780, 580)
+
         self.colors = {
-            "navy": "#173B67", "blue": "#2F6FED", "ink": "#1D2939",
-            "muted": "#667085", "surface": "#FFFFFF", "background": "#F4F7FB",
-            "border": "#D0D5DD", "success": "#16845B", "danger": "#C43232",
+            "navy": "#173B67", "blue": "#1f538d", "ink": "#e0e0e0",
+            "muted": "#888888", "surface": "#2b2b2b", "background": "#242424",
+            "border": "#3a3a3a", "success": "#16845B", "danger": "#C43232",
         }
+
         self.vars = {name: tk.StringVar(value=value) for name, value in {
             "task_type": task_type_label("search"), "target": "", "max_items": str(settings.max_items),
             "interval": str(settings.interval_seconds), "proxy": settings.proxy,
         }.items()}
         self.include_comments = tk.BooleanVar(value=False)
         self.status_var = tk.StringVar(value="准备就绪")
-        self.status_color = tk.StringVar(value=self.colors["muted"])
+
         self._build()
         self.runner = TaskRunner(self._run_task)
         self.runner.on_log = lambda message: self.root.after(0, self._log, message)
@@ -77,63 +83,65 @@ class ZhihuApp:
         self._login_session = None
         self.root.protocol("WM_DELETE_WINDOW", self._close)
 
-    def _build(self) -> None:
-        style = ttk.Style(self.root)
-        style.theme_use("clam")
-        style.configure("App.TFrame", background=self.colors["background"])
-        style.configure("Card.TLabelframe", background=self.colors["surface"], bordercolor=self.colors["border"])
-        style.configure("Card.TLabelframe.Label", background=self.colors["surface"], foreground=self.colors["navy"], font=("Segoe UI", 10, "bold"))
-        style.configure("Body.TLabel", background=self.colors["surface"], foreground=self.colors["ink"], font=("Segoe UI", 10))
-        style.configure("Muted.TLabel", background=self.colors["surface"], foreground=self.colors["muted"], font=("Segoe UI", 9))
-        style.configure("Title.TLabel", background=self.colors["navy"], foreground="white", font=("Segoe UI", 21, "bold"))
-        style.configure("Subtitle.TLabel", background=self.colors["navy"], foreground="#D6E4FF", font=("Segoe UI", 10))
-        style.configure("Primary.TButton", background=self.colors["blue"], foreground="white", padding=(16, 9), font=("Segoe UI", 10, "bold"))
-        style.map("Primary.TButton", background=[("active", "#2458C6")])
-        style.configure("Secondary.TButton", padding=(13, 9), font=("Segoe UI", 10))
-        style.configure("Status.TLabel", background=self.colors["background"], foreground=self.colors["muted"], font=("Segoe UI", 10, "bold"))
 
-        frame = ttk.Frame(self.root, style="App.TFrame", padding=(22, 18))
-        frame.pack(fill="both", expand=True)
-        header = tk.Frame(frame, bg=self.colors["navy"], padx=22, pady=18)
-        header.pack(fill="x", pady=(0, 16))
-        ttk.Label(header, text="知乎采集器", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(header, text="搜索、问题、用户内容与收藏夹，一站式保存为 Markdown", style="Subtitle.TLabel").pack(anchor="w", pady=(4, 0))
+        # Header
+        header = ctk.CTkFrame(self.root, fg_color=self.colors["surface"], corner_radius=0, height=80)
+        header.pack(fill="x", pady=(0, 10))
+        header.pack_propagate(False)
 
-        card = ttk.LabelFrame(frame, text=" 任务配置 ", style="Card.TLabelframe", padding=(18, 14))
-        card.pack(fill="x", pady=(0, 14))
+        ctk.CTkLabel(header, text="知乎采集器", font=ctk.CTkFont(family="Segoe UI", size=24, weight="bold"), text_color=self.colors["ink"]).pack(anchor="w", padx=20, pady=(15, 0))
+        ctk.CTkLabel(header, text="搜索、问题、用户内容与收藏夹，一站式保存为 Markdown", font=ctk.CTkFont(family="Segoe UI", size=12), text_color=self.colors["muted"]).pack(anchor="w", padx=20, pady=(2, 0))
+
+        main_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        # Task Config Card
+        card = ctk.CTkFrame(main_frame, fg_color=self.colors["surface"], corner_radius=10)
+        card.pack(fill="x", pady=(0, 15))
+
+        ctk.CTkLabel(card, text="任务配置", font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"), text_color=self.colors["ink"]).grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=(15, 10))
+
         fields = [("任务类型", "task_type"), ("关键词或 URL", "target"), ("最大数量", "max_items"), ("请求间隔（秒）", "interval"), ("代理地址", "proxy")]
-        for row, (label, name) in enumerate(fields):
-            ttk.Label(card, text=label, style="Body.TLabel").grid(row=row, column=0, sticky="w", pady=6, padx=(0, 16))
+
+        for row, (label, name) in enumerate(fields, start=1):
+            ctk.CTkLabel(card, text=label, font=ctk.CTkFont(family="Segoe UI", size=12), text_color=self.colors["ink"]).grid(row=row, column=0, sticky="w", pady=6, padx=(20, 16))
             if name == "task_type":
-                widget = ttk.Combobox(card, textvariable=self.vars[name], values=[task_type_label(t.value) for t in TaskType], state="readonly", width=28)
+                widget = ctk.CTkOptionMenu(card, variable=self.vars[name], values=[task_type_label(t.value) for t in TaskType], width=200, fg_color=self.colors["background"], button_color=self.colors["background"], button_hover_color=self.colors["border"])
+                widget.grid(row=row, column=1, sticky="w", pady=6)
             else:
-                widget = ttk.Entry(card, textvariable=self.vars[name], width=70)
-            widget.grid(row=row, column=1, sticky="ew", pady=6)
-        ttk.Checkbutton(card, text="抓取评论（仅采集模式）", variable=self.include_comments).grid(row=5, column=1, sticky="w", pady=(6, 2))
-        ttk.Label(card, text=build_output_hint(self.settings.output_dir), style="Muted.TLabel").grid(row=6, column=1, sticky="w", pady=(7, 0))
+                widget = ctk.CTkEntry(card, textvariable=self.vars[name], width=450, fg_color=self.colors["background"], border_color=self.colors["border"])
+                widget.grid(row=row, column=1, sticky="w", pady=6)
+
+        ctk.CTkCheckBox(card, text="抓取评论（仅采集模式）", variable=self.include_comments, font=ctk.CTkFont(family="Segoe UI", size=12), fg_color=self.colors["blue"], hover_color=self.colors["blue"]).grid(row=6, column=1, sticky="w", pady=(6, 2))
+        ctk.CTkLabel(card, text=build_output_hint(self.settings.output_dir), font=ctk.CTkFont(family="Segoe UI", size=11), text_color=self.colors["muted"]).grid(row=7, column=1, sticky="w", pady=(2, 15))
+
         card.columnconfigure(1, weight=1)
 
-        actions = ttk.Frame(frame, style="App.TFrame")
-        actions.pack(fill="x", pady=(0, 9))
-        ttk.Button(actions, text="▶  开始任务", style="Primary.TButton", command=self._start).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="■  停止", style="Secondary.TButton", command=self._cancel).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="⇥  登录知乎", style="Secondary.TButton", command=self._login).pack(side="left", padx=(0, 9))
-        ttk.Button(actions, text="打开输出目录", style="Secondary.TButton", command=self._open_output).pack(side="right")
+        # Actions
+        actions = ctk.CTkFrame(main_frame, fg_color="transparent")
+        actions.pack(fill="x", pady=(0, 15))
 
-        status_bar = ttk.Frame(frame, style="App.TFrame")
-        status_bar.pack(fill="x", pady=(0, 8))
-        ttk.Label(status_bar, textvariable=self.status_var, style="Status.TLabel").pack(side="left")
-        ttk.Label(status_bar, text="安全间隔与登录态由程序自动管理", style="Muted.TLabel").pack(side="right")
+        ctk.CTkButton(actions, text="▶ 开始任务", command=self._start, font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), width=120, height=36, fg_color=self.colors["blue"], hover_color="#2458C6").pack(side="left", padx=(0, 10))
+        ctk.CTkButton(actions, text="■ 停止", command=self._cancel, font=ctk.CTkFont(family="Segoe UI", size=13), width=100, height=36, fg_color="transparent", border_width=1, border_color=self.colors["border"], hover_color=self.colors["border"], text_color=self.colors["ink"]).pack(side="left", padx=(0, 10))
+        ctk.CTkButton(actions, text="⇥ 登录知乎", command=self._login, font=ctk.CTkFont(family="Segoe UI", size=13), width=100, height=36, fg_color="transparent", border_width=1, border_color=self.colors["border"], hover_color=self.colors["border"], text_color=self.colors["ink"]).pack(side="left", padx=(0, 10))
+        ctk.CTkButton(actions, text="打开输出目录", command=self._open_output, font=ctk.CTkFont(family="Segoe UI", size=13), width=120, height=36, fg_color="transparent", border_width=1, border_color=self.colors["border"], hover_color=self.colors["border"], text_color=self.colors["ink"]).pack(side="right")
 
-        log_card = ttk.LabelFrame(frame, text=" 运行日志 ", style="Card.TLabelframe", padding=10)
+        # Status Bar
+        status_bar = ctk.CTkFrame(main_frame, fg_color="transparent")
+        status_bar.pack(fill="x", pady=(0, 10))
+
+        ctk.CTkLabel(status_bar, textvariable=self.status_var, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"), text_color=self.colors["blue"]).pack(side="left")
+        ctk.CTkLabel(status_bar, text="安全间隔与登录态由程序自动管理", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=self.colors["muted"]).pack(side="right")
+
+        # Log Card
+        log_card = ctk.CTkFrame(main_frame, fg_color=self.colors["surface"], corner_radius=10)
         log_card.pack(fill="both", expand=True)
-        log_frame = ttk.Frame(log_card)
-        log_frame.pack(fill="both", expand=True)
-        self.log = tk.Text(log_frame, height=14, state="disabled", wrap="word", bg="#101828", fg="#D0D5DD", insertbackground="white", relief="flat", padx=14, pady=12, font=("Consolas", 10))
-        scrollbar = ttk.Scrollbar(log_frame, orient="vertical", command=self.log.yview)
-        self.log.configure(yscrollcommand=scrollbar.set)
-        self.log.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+
+        ctk.CTkLabel(log_card, text="运行日志", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color=self.colors["ink"]).pack(anchor="w", padx=20, pady=(10, 5))
+
+        self.log = ctk.CTkTextbox(log_card, fg_color=self.colors["background"], text_color=self.colors["ink"], font=ctk.CTkFont(family="Consolas", size=12), wrap="word", corner_radius=8)
+        self.log.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        self.log.configure(state="disabled")
 
     def _open_output(self) -> None:
         Path(self.settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -182,7 +190,10 @@ class ZhihuApp:
         self.runner.cancel(); self._log("已请求停止任务")
 
     def _log(self, message: str) -> None:
-        self.log.configure(state="normal"); self.log.insert("end", message + "\n"); self.log.see("end"); self.log.configure(state="disabled")
+        self.log.configure(state="normal")
+        self.log.insert("end", message + "\n")
+        self.log.see("end")
+        self.log.configure(state="disabled")
 
     def _finished(self, status: str) -> None:
         self.status_var.set(f"任务结束：{status}")
