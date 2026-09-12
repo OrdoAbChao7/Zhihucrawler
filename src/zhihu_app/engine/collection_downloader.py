@@ -138,8 +138,10 @@ class CollectionDownloader:
         for item in items:
             url = item.get("url", "")
             title = _safe_filename(_item_title(item))
-            content_identity = _content_preview(item)
-            identity = url or str(item.get("id", "")) or content_identity or title
+            # ⚡ Bolt: Use short-circuit evaluation for identity generation to avoid
+            # executing expensive regex/string operations in _content_preview when
+            # an earlier identifier (url or id) is already present.
+            identity = url or str(item.get("id", "")) or _content_preview(item) or title
             suffix = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:10]
             path = markdown_dir / f"{title}-{suffix}.md"
             if should_skip_existing(path, url, item.get("updated_time", 0)):
