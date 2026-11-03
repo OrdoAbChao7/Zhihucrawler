@@ -65,7 +65,11 @@ def _item_title(item: dict[str, Any]) -> str:
 def should_skip_existing(path: Path, url: str, updated_time: int) -> bool:
     if not path.is_file():
         return False
-    text = path.read_text(encoding="utf-8", errors="replace")
+    # ⚡ Bolt: Read only the first 4KB of the file since the metadata
+    # (url and updated_time) is located in the front matter at the top.
+    # This prevents loading entire markdown files into memory and speeds up I/O significantly.
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        text = f.read(4096)
     return f"url: {url}" in text and f"updated_time: {updated_time}" in text
 
 
